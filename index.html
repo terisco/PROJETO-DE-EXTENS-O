@@ -6,27 +6,362 @@
     <title>EcoFome | Conectando Sobras a Quem Precisa</title>
     <link rel="stylesheet" href="style.css" />
     <link
-      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,wght@0,700;1,400&display=swap"
       rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+      rel="stylesheet"
+    />
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
   </head>
   <body>
+    <!-- NAVBAR -->
     <header class="navbar">
-      <div class="container">
-        <h1 class="logo">Eco<span>Fome</span></h1>
-        <p class="tagline">Tecnologia contra o desperdício</p>
+      <div class="nav-inner">
+        <div class="logo-wrap">
+          <div class="logo-icon">🌿</div>
+          <div>
+            <h1 class="logo">Eco<span>Fome</span></h1>
+            <p class="tagline">Tecnologia contra o desperdício</p>
+          </div>
+        </div>
+        <nav class="nav-tabs">
+          <button class="nav-btn active" onclick="showTab('feed')">
+            <span class="material-icons-round">volunteer_activism</span>
+            <span>Doações</span>
+          </button>
+          <button class="nav-btn" onclick="showTab('doar')">
+            <span class="material-icons-round">add_circle</span>
+            <span>Doar</span>
+          </button>
+          <button class="nav-btn" onclick="showTab('mapa')">
+            <span class="material-icons-round">map</span>
+            <span>Mapa</span>
+          </button>
+        </nav>
+        <!-- Indicador de conexão Firebase -->
+        <div class="connection-status" id="connectionStatus">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Conectando...</span>
+        </div>
+        <button class="hamburger" onclick="toggleMenu()" id="hamburger">
+          <span class="material-icons-round">menu</span>
+        </button>
+      </div>
+      <!-- Mobile menu -->
+      <div class="mobile-menu" id="mobileMenu">
+        <button
+          onclick="
+            showTab('feed');
+            toggleMenu();
+          "
+        >
+          <span class="material-icons-round">volunteer_activism</span> Doações
+          Disponíveis
+        </button>
+        <button
+          onclick="
+            showTab('doar');
+            toggleMenu();
+          "
+        >
+          <span class="material-icons-round">add_circle</span> Cadastrar Doação
+        </button>
+        <button
+          onclick="
+            showTab('mapa');
+            toggleMenu();
+          "
+        >
+          <span class="material-icons-round">map</span> Ver no Mapa
+        </button>
       </div>
     </header>
 
-    <main class="container">
-      <section class="card form-section">
-        <h2><span class="material-icons">add_circle</span> Cadastrar Doação</h2>
-        <form id="donation-form">
-          <div class="input-group">
-            <label>O que você está doando?</label>
+    <!-- HERO -->
+    <section class="hero" id="hero">
+      <div class="hero-content">
+        <div class="hero-badge">🌱 Juntos contra o desperdício</div>
+        <h2 class="hero-title">Comida boa<br /><em>não vai pro lixo.</em></h2>
+        <p class="hero-sub">
+          Conectamos estabelecimentos com sobras de alimentos a quem mais
+          precisa — de forma rápida, simples e gratuita.
+        </p>
+        <div class="hero-stats">
+          <div class="stat">
+            <span class="stat-num" id="stat-doacoes">0</span
+            ><span class="stat-label">doações ativas</span>
           </div>
-        </form>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-num" id="stat-pessoas">0</span
+            ><span class="stat-label">pessoas beneficiadas</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-num" id="stat-kg">0</span
+            ><span class="stat-label">kg salvos</span>
+          </div>
+        </div>
+        <div class="hero-cta">
+          <button class="btn-hero-primary" onclick="showTab('doar')">
+            <span class="material-icons-round">add_circle</span> Quero Doar
+          </button>
+          <button class="btn-hero-outline" onclick="showTab('feed')">
+            Ver Doações
+          </button>
+        </div>
+      </div>
+      <div class="hero-art">
+        <div class="floating-card fc1">🥗 Salada fresca · 2kg</div>
+        <div class="floating-card fc2">🍞 Pão artesanal · 15 unid.</div>
+        <div class="floating-card fc3">🍎 Frutas mistas · 5kg</div>
+        <div class="floating-card fc4">🥘 Marmitas prontas · 8 unid.</div>
+      </div>
+    </section>
+
+    <main class="container" id="main-content">
+      <!-- TAB: FEED DE DOAÇÕES -->
+      <section class="tab-content active" id="tab-feed">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="material-icons-round">volunteer_activism</span> Doações
+            Disponíveis
+          </h2>
+          <div class="filter-row">
+            <button
+              class="filter-btn active"
+              onclick="filterDoacoes('todas', this)"
+            >
+              Todas
+            </button>
+            <button
+              class="filter-btn"
+              onclick="filterDoacoes('disponivel', this)"
+            >
+              Disponíveis
+            </button>
+            <button
+              class="filter-btn"
+              onclick="filterDoacoes('reservado', this)"
+            >
+              Reservadas
+            </button>
+          </div>
+        </div>
+        <div class="search-bar">
+          <span class="material-icons-round">search</span>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Buscar doações..."
+            oninput="searchDoacoes(this.value)"
+          />
+        </div>
+
+        <div id="feed-list" class="feed-list">
+          <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Carregando doações...</p>
+          </div>
+        </div>
+
+        <div class="empty-state" id="emptyState" style="display: none">
+          <span style="font-size: 3rem">🥹</span>
+          <p>Nenhuma doação encontrada.</p>
+        </div>
+      </section>
+
+      <!-- TAB: FORMULÁRIO DE DOAÇÃO -->
+      <section class="tab-content" id="tab-doar">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="material-icons-round">add_circle</span> Cadastrar
+            Doação
+          </h2>
+        </div>
+
+        <div class="form-card">
+          <form id="donation-form" onsubmit="cadastrarDoacao(event)">
+            <div class="form-group">
+              <label>O que você está doando? *</label>
+              <input
+                type="text"
+                id="titulo"
+                placeholder="Ex: Pão artesanal, frutas, marmitas..."
+                required
+                maxlength="80"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Descrição</label>
+              <textarea
+                id="descricao"
+                placeholder="Detalhes sobre o alimento, condição, ingredientes..."
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Quantidade *</label>
+                <input
+                  type="text"
+                  id="quantidade"
+                  placeholder="Ex: 5 kg, 10 unidades..."
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>Categoria</label>
+                <select id="categoria">
+                  <option value="frutas">🍎 Frutas e Legumes</option>
+                  <option value="paes">🍞 Pães e Massas</option>
+                  <option value="refeicoes">🍽️ Refeições Prontas</option>
+                  <option value="laticinios">🥛 Laticínios</option>
+                  <option value="outros">📦 Outros</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Validade / Retirada até *</label>
+                <input type="datetime-local" id="validade" required />
+              </div>
+              <div class="form-group">
+                <label>Nome do estabelecimento *</label>
+                <input
+                  type="text"
+                  id="estabelecimento"
+                  placeholder="Restaurante, padaria..."
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Endereço para retirada *</label>
+              <input
+                type="text"
+                id="endereco"
+                placeholder="Rua, número, bairro, cidade..."
+                required
+                oninput="debounceGeocode(this.value)"
+              />
+              <div class="geocode-status" id="geocodeStatus"></div>
+            </div>
+
+            <!-- Mini mapa de preview do endereço -->
+            <div
+              class="form-group"
+              id="previewMapWrapper"
+              style="display: none"
+            >
+              <label>📍 Localização detectada</label>
+              <div
+                id="previewMap"
+                style="
+                  height: 180px;
+                  border-radius: 10px;
+                  border: 2px solid var(--primary);
+                "
+              ></div>
+            </div>
+
+            <div class="form-group">
+              <label>Telefone para contato</label>
+              <input type="tel" id="telefone" placeholder="(34) 99999-9999" />
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary" id="submitBtn">
+                <span class="material-icons-round">check_circle</span>
+                Publicar Doação
+              </button>
+              <button type="button" class="btn-outline" onclick="resetForm()">
+                <span class="material-icons-round">refresh</span>
+                Limpar
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB: MAPA -->
+      <section class="tab-content" id="tab-mapa">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="material-icons-round">map</span> Doações no Mapa
+          </h2>
+        </div>
+        <div class="map-container">
+          <!-- Mapa real Leaflet -->
+          <div
+            id="map"
+            style="
+              height: 460px;
+              border-radius: 16px;
+              border: 1px solid var(--border);
+              z-index: 1;
+            "
+          ></div>
+          <div class="map-sidebar">
+            <h3>Perto de você</h3>
+            <div id="map-list"></div>
+          </div>
+        </div>
       </section>
     </main>
+
+    <!-- MODAL DE DETALHES -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">
+          <span class="material-icons-round">close</span>
+        </button>
+        <div id="modal-content"></div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- BOTTOM NAV MOBILE -->
+    <nav class="bottom-nav">
+      <button class="bnav-btn active" onclick="showTab('feed')" id="bnav-feed">
+        <span class="material-icons-round">volunteer_activism</span>
+        <span>Doações</span>
+      </button>
+      <button class="bnav-btn" onclick="showTab('doar')" id="bnav-doar">
+        <span class="material-icons-round">add_circle</span>
+        <span>Doar</span>
+      </button>
+      <button class="bnav-btn" onclick="showTab('mapa')" id="bnav-mapa">
+        <span class="material-icons-round">map</span>
+        <span>Mapa</span>
+      </button>
+    </nav>
+
+    <footer class="footer">
+      <p>
+        🌿 EcoFome — Tecnologia contra o desperdício · Feito com ♥ em Uberaba
+      </p>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Firebase SDK (modular via CDN compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <script src="index.js"></script>
   </body>
 </html>
